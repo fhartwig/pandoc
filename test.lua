@@ -18,6 +18,10 @@ function Blocksep()
   return "\n\n"
 end
 
+function Header(lev, s)
+  return "<h" .. lev .. ">" .. s .. "</h" .. lev .. ">"
+end
+
 local meta = {}
 meta.__index =
   function(_, key)

@@ -104,22 +104,24 @@ blockToCustom _ Null = return ""
 blockToCustom lua (Plain inlines) =
   inlineListToCustom lua inlines
 
-{-
-blockToCustom opts (Para [Image txt (src,tit)]) = do
-capt <- inlineListToCustom opts txt
-callfunc lua "writer.captioned_image" t src tit
--}
+blockToCustom lua (Para [Image txt (src,tit)]) = do
+  capt <- inlineListToCustom lua txt
+  callfunc lua "CaptionedImage" lua src tit
 
 blockToCustom lua (Para inlines) = do
   t <- inlineListToCustom lua inlines
   callfunc lua "Para" t
 
 blockToCustom lua (RawBlock format str) =
-  callfunc lua "writer.rawblock" format (fromString str)
+  callfunc lua "RawBlock" format (fromString str)
+
+blockToCustom lua HorizontalRule =
+  callfunc lua "HorizontalRule"
+
+blockToCustom lua (Header level _attr inlines) =
+  callfunc lua "Header" level =<< inlineListToCustom lua inlines
 
 {-
-blockToCustom _ HorizontalRule = return "\n-----\n"
-
 blockToCustom opts (Header level inlines) = do
   contents <- inlineListToCustom opts inlines
   let eqs = replicate level '='
@@ -304,62 +306,62 @@ inlineToCustom lua (Emph lst) = do
 
 inlineToCustom lua (Strong lst) = do
   x <- inlineListToCustom lua lst
-  callfunc lua "writer.strong" x
+  callfunc lua "Strong" x
 
 inlineToCustom lua (Strikeout lst) = do
   x <- inlineListToCustom lua lst
-  callfunc lua "writer.strikeout" x
+  callfunc lua "Strikeout" x
 
 inlineToCustom lua (Superscript lst) = do
   x <- inlineListToCustom lua lst
-  callfunc lua "writer.superscript" x
+  callfunc lua "Superscript" x
 
 inlineToCustom lua (Subscript lst) = do
   x <- inlineListToCustom lua lst
-  callfunc lua "writer.subscript" x
+  callfunc lua "Subscript" x
 
 inlineToCustom lua (SmallCaps lst) = do
   x <- inlineListToCustom lua lst
-  callfunc lua "writer.smallcaps" x
+  callfunc lua "SmallCaps" x
 
 inlineToCustom lua (Quoted SingleQuote lst) = do
   x <- inlineListToCustom lua lst
-  callfunc lua "writer.singlequoted" x
+  callfunc lua "SingleQuoted" x
 
 inlineToCustom lua (Quoted DoubleQuote lst) = do
   x <- inlineListToCustom lua lst
-  callfunc lua "writer.doublequoted" x
+  callfunc lua "DoubleQuoted" x
 
 inlineToCustom lua (Cite _  lst) = do
   x <- inlineListToCustom lua lst
-  callfunc lua "writer.cite" x
+  callfunc lua "Cite" x
 
 inlineToCustom lua (Code (id',classes,keyvals) str) =
-  callfunc lua "writer.code" (fromString str) (fromString id')
+  callfunc lua "Code" (fromString str) (fromString id')
       (map fromString classes)
       (map (\(k,v) -> (fromString k, fromString v)) keyvals)
 
 inlineToCustom lua (Math DisplayMath str) =
-  callfunc lua "writer.displaymath" (fromString str)
+  callfunc lua "DisplayMath" (fromString str)
 
 inlineToCustom lua (Math InlineMath str) =
-  callfunc lua "writer.inlinemath" (fromString str)
+  callfunc lua "InlineMath" (fromString str)
 
 inlineToCustom lua (RawInline format str) =
-  callfunc lua "writer.rawinline" format (fromString str)
+  callfunc lua "RawInline" format (fromString str)
 
 inlineToCustom lua (LineBreak) =
-  callfunc lua "writer.linebreak"
+  callfunc lua "LineBreak"
 
 inlineToCustom lua (Link txt (src,tit)) = do
   label <- inlineListToCustom lua txt
-  callfunc lua "writer.link" label (fromString src) (fromString tit)
+  callfunc lua "Link" label (fromString src) (fromString tit)
 
 inlineToCustom lua (Image alt (src,tit)) = do
   alt' <- inlineListToCustom lua alt
-  callfunc lua "writer.image" alt' (fromString src) (fromString tit)
+  callfunc lua "Image" alt' (fromString src) (fromString tit)
 
 inlineToCustom lua (Note contents) = do
   contents' <- blockListToCustom lua contents
-  callfunc lua "writer.note" contents'
+  callfunc lua "Note" contents'
 
