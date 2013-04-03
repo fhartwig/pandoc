@@ -58,11 +58,13 @@ instance StackValue ByteString where
     peek l n = (fmap . fmap) C8.pack (Lua.peek l n)
     valuetype _ = Lua.TSTRING
 
+addValue :: StackValue a => LuaState -> (Int, a) -> IO ()
+addValue lua (i, x) = Lua.push lua x >> Lua.rawseti lua (-2) i
+
 instance StackValue a => StackValue [a] where
   push lua xs = do
     Lua.createtable lua (length xs + 1) 0
-    let addValue (i, x) = Lua.push lua x >> Lua.rawseti lua (-2) i
-    mapM_ addValue $ zip [1..] xs
+    mapM_ (addValue lua) $ zip [1..] xs
   peek lua i = do
     top <- Lua.gettop lua
     let i' = if i < 0 then top + i + 1 else i
@@ -70,6 +72,13 @@ instance StackValue a => StackValue [a] where
     lst <- getList lua i'
     Lua.pop lua 1
     return (Just lst)
+  valuetype _ = Lua.TTABLE
+
+instance (StackValue a, StackValue b, StackValue c) => StackValue (a,b,c) where
+  push lua (x,y,z) = do
+    Lua.createtable lua 4 0
+    addValue lua (1,x) >> addValue lua (2,y) >> addValue lua (3,z)
+  peek lua i = undefined
   valuetype _ = Lua.TTABLE
 
 instance (StackValue a, StackValue b) => StackValue [(a,b)] where
@@ -118,8 +127,8 @@ blockToCustom lua (RawBlock format str) =
 blockToCustom lua HorizontalRule =
   callfunc lua "HorizontalRule"
 
-blockToCustom lua (Header level _attr inlines) =
-  callfunc lua "Header" level =<< inlineListToCustom lua inlines
+blockToCustom lua (Header level attr inlines) =
+  callfunc lua "Header" level attr =<< inlineListToCustom lua inlines
 
 {-
 blockToCustom opts (Header level inlines) = do
