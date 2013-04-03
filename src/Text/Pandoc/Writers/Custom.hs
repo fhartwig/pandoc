@@ -90,6 +90,11 @@ instance (StackValue a, StackValue b) => StackValue [(a,b)] where
   peek lua i = undefined -- not needed for our purposes
   valuetype _ = Lua.TTABLE
 
+instance StackValue [Inline] where
+  push l ils = Lua.push l . C8.unpack =<< inlineListToCustom l ils
+  peek l n = undefined
+  valuetype _ = Lua.TSTRING
+
 -- | Convert Pandoc to custom markup.
 writeCustom :: FilePath -> WriterOptions -> Pandoc -> IO String
 writeCustom luaFile opts (Pandoc _ blocks) = do
@@ -117,9 +122,8 @@ blockToCustom lua (Para [Image txt (src,tit)]) = do
   capt <- inlineListToCustom lua txt
   callfunc lua "CaptionedImage" lua src tit
 
-blockToCustom lua (Para inlines) = do
-  t <- inlineListToCustom lua inlines
-  callfunc lua "Para" t
+blockToCustom lua (Para inlines) =
+  callfunc lua "Para" inlines
 
 blockToCustom lua (RawBlock format str) =
   callfunc lua "RawBlock" format (fromString str)
