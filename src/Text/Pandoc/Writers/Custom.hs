@@ -112,7 +112,7 @@ callfunc lua "writer.captioned_image" t src tit
 
 blockToCustom lua (Para inlines) = do
   t <- inlineListToCustom lua inlines
-  callfunc lua "writer.para" t
+  callfunc lua "Para" t
 
 blockToCustom lua (RawBlock format str) =
   callfunc lua "writer.rawblock" format (fromString str)
@@ -279,7 +279,7 @@ blockListToCustom :: LuaState -- ^ Options
                   -> [Block]       -- ^ List of block elements
                   -> IO ByteString
 blockListToCustom lua xs = do
-  blocksep <- callfunc lua "writer.blocksep"
+  blocksep <- callfunc lua "Blocksep"
   bs <- mapM (blockToCustom lua) xs
   return $ mconcat $ intersperse blocksep bs
 
@@ -293,14 +293,14 @@ inlineListToCustom lua lst = do
 inlineToCustom :: LuaState -> Inline -> IO ByteString
 
 inlineToCustom lua (Str str) =
-  callfunc lua "writer.str" $ fromString str
+  callfunc lua "Str" $ fromString str
 
 inlineToCustom lua Space =
-  callfunc lua "writer.space"
+  callfunc lua "Space"
 
 inlineToCustom lua (Emph lst) = do
   x <- inlineListToCustom lua lst
-  callfunc lua "writer.emph" x
+  callfunc lua "Emph" x
 
 inlineToCustom lua (Strong lst) = do
   x <- inlineListToCustom lua lst

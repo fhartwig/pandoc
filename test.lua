@@ -1,22 +1,20 @@
-writer = {}
-
-writer.str = function(s)
+function Str(s)
   return s
 end
 
-writer.space = function()
+function Space()
   return " "
 end
 
-writer.emph = function(s)
+function Emph(s)
   return "<em>" .. s .. "</em>"
 end
 
-writer.para = function(s)
+function Para(s)
   return s
 end
 
-writer.blocksep = function()
+function Blocksep()
   return "\n\n"
 end
 
@@ -26,5 +24,5 @@ meta.__index =
     io.stderr:write(string.format("WARNING: Undefined writer function '%s'\n",key))
     return ""
   end
-setmetatable(writer, meta)
+setmetatable(_G, meta)
 
