@@ -19,7 +19,7 @@ function Blocksep()
 end
 
 function Header(lev, attr, s)
-  return "<h" .. lev .. " id='" .. attr[1] .. "'>" .. s .. "</h" .. lev .. ">"
+  return "<h" .. lev .. " id='" .. attr['id'] .. "'>" .. s .. "</h" .. lev .. ">"
 end
 
 local meta = {}

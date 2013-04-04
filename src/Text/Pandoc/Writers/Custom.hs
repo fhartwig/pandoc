@@ -41,6 +41,12 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as C8
 import Data.Monoid
 
+attrToAssocList :: Attr -> [(ByteString, ByteString)]
+attrToAssocList (id',classes,keyvals) =
+      ("id", fromString id')
+    : ("class", fromString $ unwords classes)
+    : map (\(x,y) -> (fromString x, fromString y)) keyvals
+
 getList :: StackValue a => LuaState -> Int -> IO [a]
 getList lua i' = do
   continue <- Lua.next lua i'
@@ -72,13 +78,6 @@ instance StackValue a => StackValue [a] where
     lst <- getList lua i'
     Lua.pop lua 1
     return (Just lst)
-  valuetype _ = Lua.TTABLE
-
-instance (StackValue a, StackValue b, StackValue c) => StackValue (a,b,c) where
-  push lua (x,y,z) = do
-    Lua.createtable lua 4 0
-    addValue lua (1,x) >> addValue lua (2,y) >> addValue lua (3,z)
-  peek lua i = undefined
   valuetype _ = Lua.TTABLE
 
 instance (StackValue a, StackValue b) => StackValue [(a,b)] where
@@ -115,32 +114,25 @@ blockToCustom :: LuaState      -- ^ Lua state
 
 blockToCustom _ Null = return ""
 
-blockToCustom lua (Plain inlines) =
-  inlineListToCustom lua inlines
+blockToCustom lua (Plain inlines) = inlineListToCustom lua inlines
 
-blockToCustom lua (Para [Image txt (src,tit)]) = do
-  capt <- inlineListToCustom lua txt
-  callfunc lua "CaptionedImage" lua src tit
+blockToCustom lua (Para [Image txt (src,tit)]) =
+  callfunc lua "CaptionedImage" lua src tit txt
 
-blockToCustom lua (Para inlines) =
-  callfunc lua "Para" inlines
+blockToCustom lua (Para inlines) = callfunc lua "Para" inlines
 
 blockToCustom lua (RawBlock format str) =
   callfunc lua "RawBlock" format (fromString str)
 
-blockToCustom lua HorizontalRule =
-  callfunc lua "HorizontalRule"
+blockToCustom lua HorizontalRule = callfunc lua "HorizontalRule"
 
 blockToCustom lua (Header level attr inlines) =
-  callfunc lua "Header" level attr =<< inlineListToCustom lua inlines
+  callfunc lua "Header" level (attrToAssocList attr) inlines
+
+blockToCustom lua (CodeBlock attr str) =
+  callfunc lua "CodeBlock" (attrToAssocList attr) (fromString str)
 
 {-
-blockToCustom opts (Header level inlines) = do
-  contents <- inlineListToCustom opts inlines
-  let eqs = replicate level '='
-  return $ eqs ++ " " ++ contents ++ " " ++ eqs ++ "\n"
-
-blockToCustom _ (CodeBlock (_,classes,_) str) = undefined
 
 lockToCustom opts (BlockQuote blocks) = do
   contents <- blockListToCustom opts blocks
