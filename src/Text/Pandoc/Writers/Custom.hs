@@ -94,6 +94,11 @@ instance StackValue [Inline] where
   peek l n = undefined
   valuetype _ = Lua.TSTRING
 
+instance StackValue [Block] where
+  push l ils = Lua.push l . C8.unpack =<< blockListToCustom l ils
+  peek l n = undefined
+  valuetype _ = Lua.TSTRING
+
 -- | Convert Pandoc to custom markup.
 writeCustom :: FilePath -> WriterOptions -> Pandoc -> IO String
 writeCustom luaFile opts (Pandoc _ blocks) = do
@@ -132,11 +137,11 @@ blockToCustom lua (Header level attr inlines) =
 blockToCustom lua (CodeBlock attr str) =
   callfunc lua "CodeBlock" (attrToAssocList attr) (fromString str)
 
+blockToCustom lua (BlockQuote blocks) = do
+  callfunc lua "BlockQuote" blocks
+
 {-
 
-lockToCustom opts (BlockQuote blocks) = do
-  contents <- blockListToCustom opts blocks
-  return $ "<blockquote>" ++ contents ++ "</blockquote>" 
 
 blockToCustom opts (Table capt aligns widths headers rows') = do
   let alignStrings = map alignmentToString aligns
@@ -341,10 +346,8 @@ inlineToCustom lua (Cite _  lst) = do
   x <- inlineListToCustom lua lst
   callfunc lua "Cite" x
 
-inlineToCustom lua (Code (id',classes,keyvals) str) =
-  callfunc lua "Code" (fromString str) (fromString id')
-      (map fromString classes)
-      (map (\(k,v) -> (fromString k, fromString v)) keyvals)
+inlineToCustom lua (Code attr str) =
+  callfunc lua "Code" (attrToAssocList attr) (fromString str)
 
 inlineToCustom lua (Math DisplayMath str) =
   callfunc lua "DisplayMath" (fromString str)

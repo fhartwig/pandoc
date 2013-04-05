@@ -22,6 +22,10 @@ function Header(lev, attr, s)
   return "<h" .. lev .. " id='" .. attr['id'] .. "'>" .. s .. "</h" .. lev .. ">"
 end
 
+function BlockQuote(s)
+  return "<blockquote>\n" .. s .. "\n</blockquote>"
+end
+
 local meta = {}
 meta.__index =
   function(_, key)
