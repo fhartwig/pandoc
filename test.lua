@@ -10,6 +10,14 @@ function Emph(s)
   return "<em>" .. s .. "</em>"
 end
 
+function Strong(s)
+  return "<strong>" .. s .. "</strong>"
+end
+
+function Code(s)
+  return "<code>" .. s .. "</code>"
+end
+
 function Plain(s)
   return s
 end
@@ -22,12 +30,24 @@ function Blocksep()
   return "\n\n"
 end
 
-function Header(lev, attr, s)
-  return "<h" .. lev .. " id='" .. attr['id'] .. "'>" .. s .. "</h" .. lev .. ">"
+function Header(lev, s, attr)
+  local ident = ""
+  if attr['id'] then
+    ident = "id='" .. attr['id'] .. "'"
+  end
+  return "<h" .. lev .. ident .. ">" .. s .. "</h" .. lev .. ">"
 end
 
 function BlockQuote(s)
   return "<blockquote>\n" .. s .. "\n</blockquote>"
+end
+
+function HorizontalRule()
+  return "<hr/>"
+end
+
+function CodeBlock(s)
+  return "<pre><code>\n" .. s .. "\n</code></pre>"
 end
 
 function BulletList(items)
@@ -38,11 +58,27 @@ function BulletList(items)
   return "<ul>\n" .. table.concat(buffer, "\n") .. "\n</ul>"
 end
 
+function OrderedList(items)
+  local buffer = {}
+  for _, item in pairs(items) do
+    table.insert(buffer, "<li>" .. item .. "</li>")
+  end
+  return "<ol>\n" .. table.concat(buffer, "\n") .. "\n</ol>"
+end
+
+function DefinitionList(items)
+  local buffer = {}
+  for term,def in pairs(items) do
+    table.insert(buffer, "<dt>" .. term .. "</dt>\n<dd>" .. table.concat(def,"</dd>\n<dd>") .. "</dd>")
+  end
+  return "<dl>\n" .. table.concat(buffer, "\n") .. "\n</dl>"
+end
+
 local meta = {}
 meta.__index =
   function(_, key)
     io.stderr:write(string.format("WARNING: Undefined writer function '%s'\n",key))
-    return ""
+    return function() return "" end
   end
 setmetatable(_G, meta)
 

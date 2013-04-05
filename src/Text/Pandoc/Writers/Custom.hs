@@ -132,10 +132,10 @@ blockToCustom lua (RawBlock format str) =
 blockToCustom lua HorizontalRule = callfunc lua "HorizontalRule"
 
 blockToCustom lua (Header level attr inlines) =
-  callfunc lua "Header" level (attrToAssocList attr) inlines
+  callfunc lua "Header" level inlines (attrToAssocList attr)
 
 blockToCustom lua (CodeBlock attr str) =
-  callfunc lua "CodeBlock" (attrToAssocList attr) (fromString str)
+  callfunc lua "CodeBlock" (fromString str) (attrToAssocList attr)
 
 blockToCustom lua (BlockQuote blocks) = callfunc lua "BlockQuote" blocks
 
@@ -144,129 +144,11 @@ blockToCustom lua (Table capt aligns widths headers rows') =
 
 blockToCustom lua (BulletList items) = callfunc lua "BulletList" items
 
-{-
+blockToCustom lua (OrderedList (num,sty,delim) items) =
+  callfunc lua "OrderedList" items num (show sty) (show delim)
 
-blockToCustom opts x@(BulletList items) = do
-  oldUseTags <- get >>= return . stUseTags
-  let useTags = oldUseTags || not (isSimpleList x)
-  if useTags
-     then do
-        modify $ \s -> s { stUseTags = True }
-        contents <- mapM (listItemToCustom opts) items
-        modify $ \s -> s { stUseTags = oldUseTags }
-        return $ "<ul>\n" ++ vcat contents ++ "</ul>\n"
-     else do
-        modify $ \s -> s { stListLevel = stListLevel s ++ "*" }
-        contents <- mapM (listItemToCustom opts) items
-        modify $ \s -> s { stListLevel = init (stListLevel s) }
-        return $ vcat contents ++ "\n"
-
-blockToCustom opts x@(OrderedList attribs items) = do
-  oldUseTags <- get >>= return . stUseTags
-  let useTags = oldUseTags || not (isSimpleList x)
-  if useTags
-     then do
-        modify $ \s -> s { stUseTags = True }
-        contents <- mapM (listItemToCustom opts) items
-        modify $ \s -> s { stUseTags = oldUseTags }
-        return $ "<ol" ++ listAttribsToString attribs ++ ">\n" ++ vcat contents ++ "</ol>\n"
-     else do
-        modify $ \s -> s { stListLevel = stListLevel s ++ "#" }
-        contents <- mapM (listItemToCustom opts) items
-        modify $ \s -> s { stListLevel = init (stListLevel s) }
-        return $ vcat contents ++ "\n"
-
-blockToCustom opts x@(DefinitionList items) = do
-  oldUseTags <- get >>= return . stUseTags
-  let useTags = oldUseTags || not (isSimpleList x)
-  if useTags
-     then do
-        modify $ \s -> s { stUseTags = True }
-        contents <- mapM (definitionListItemToCustom opts) items
-        modify $ \s -> s { stUseTags = oldUseTags }
-        return $ "<dl>\n" ++ vcat contents ++ "</dl>\n"
-     else do
-        modify $ \s -> s { stListLevel = stListLevel s ++ ";" }
-        contents <- mapM (definitionListItemToCustom opts) items
-        modify $ \s -> s { stListLevel = init (stListLevel s) }
-        return $ vcat contents ++ "\n"
-
--- Auxiliary functions for lists:
-
--- | Convert ordered list attributes to HTML attribute string
-listAttribsToString :: ListAttributes -> String
-listAttribsToString (startnum, numstyle, _) =
-  let numstyle' = camelCaseToHyphenated $ show numstyle
-  in  (if startnum /= 1
-          then " start=\"" ++ show startnum ++ "\""
-          else "") ++
-      (if numstyle /= DefaultStyle
-          then " style=\"list-style-type: " ++ numstyle' ++ ";\""
-          else "")
-
--- | Convert bullet or ordered list item (list of blocks) to Custom.
-listItemToCustom :: LuaState -> [Block] -> State WriterState String
-listItemToCustom opts items = do
-  contents <- blockListToCustom opts items
-  useTags <- get >>= return . stUseTags
-  if useTags
-     then return $ "<li>" ++ contents ++ "</li>"
-     else do
-       marker <- get >>= return . stListLevel
-       return $ marker ++ " " ++ contents
-
--- | Convert definition list item (label, list of blocks) to Custom.
-definitionListItemToCustom :: LuaState
-                             -> ([Inline],[[Block]]) 
-                             -> State WriterState String
-definitionListItemToCustom opts (label, items) = do
-  labelText <- inlineListToCustom opts label
-  contents <- mapM (blockListToCustom opts) items
-  useTags <- get >>= return . stUseTags
-  if useTags
-     then return $ "<dt>" ++ labelText ++ "</dt>\n" ++
-           (intercalate "\n" $ map (\d -> "<dd>" ++ d ++ "</dd>") contents)
-     else do
-       marker <- get >>= return . stListLevel
-       return $ marker ++ " " ++ labelText ++ "\n" ++
-           (intercalate "\n" $ map (\d -> init marker ++ ": " ++ d) contents)
-
--- Auxiliary functions for tables:
-
-tableRowToCustom :: LuaState
-                    -> [String]
-                    -> Int
-                    -> [[Block]]
-                    -> State WriterState String
-tableRowToCustom opts alignStrings rownum cols' = do
-  let celltype = if rownum == 0 then "th" else "td"
-  let rowclass = case rownum of
-                      0                  -> "header"
-                      x | x `rem` 2 == 1 -> "odd"
-                      _                  -> "even"
-  cols'' <- sequence $ zipWith 
-            (\alignment item -> tableItemToCustom opts celltype alignment item) 
-            alignStrings cols'
-  return $ "<tr class=\"" ++ rowclass ++ "\">\n" ++ unlines cols'' ++ "</tr>"
-
-alignmentToString :: Alignment -> [Char]
-alignmentToString alignment = case alignment of
-                                 AlignLeft    -> "left"
-                                 AlignRight   -> "right"
-                                 AlignCenter  -> "center"
-                                 AlignDefault -> "left"
-
-tableItemToCustom :: LuaState
-                     -> String
-                     -> String
-                     -> [Block]
-                     -> State WriterState String
-tableItemToCustom opts celltype align' item = do
-  let mkcell x = "<" ++ celltype ++ " align=\"" ++ align' ++ "\">" ++
-                    x ++ "</" ++ celltype ++ ">"
-  contents <- blockListToCustom opts item
-  return $ mkcell contents
--}
+blockToCustom lua (DefinitionList items) =
+  callfunc lua "DefinitionList" items
 
 -- | Convert list of Pandoc block elements to Custom.
 blockListToCustom :: LuaState -- ^ Options
@@ -329,7 +211,7 @@ inlineToCustom lua (Cite _  lst) = do
   callfunc lua "Cite" x
 
 inlineToCustom lua (Code attr str) =
-  callfunc lua "Code" (attrToAssocList attr) (fromString str)
+  callfunc lua "Code" (fromString str) (attrToAssocList attr)
 
 inlineToCustom lua (Math DisplayMath str) =
   callfunc lua "DisplayMath" (fromString str)
