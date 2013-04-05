@@ -119,10 +119,10 @@ blockToCustom :: LuaState      -- ^ Lua state
 
 blockToCustom _ Null = return ""
 
-blockToCustom lua (Plain inlines) = inlineListToCustom lua inlines
+blockToCustom lua (Plain inlines) = callfunc lua "Plain" inlines
 
 blockToCustom lua (Para [Image txt (src,tit)]) =
-  callfunc lua "CaptionedImage" lua src tit txt
+  callfunc lua "CaptionedImage" src tit txt
 
 blockToCustom lua (Para inlines) = callfunc lua "Para" inlines
 
@@ -137,32 +137,14 @@ blockToCustom lua (Header level attr inlines) =
 blockToCustom lua (CodeBlock attr str) =
   callfunc lua "CodeBlock" (attrToAssocList attr) (fromString str)
 
-blockToCustom lua (BlockQuote blocks) = do
-  callfunc lua "BlockQuote" blocks
+blockToCustom lua (BlockQuote blocks) = callfunc lua "BlockQuote" blocks
+
+blockToCustom lua (Table capt aligns widths headers rows') =
+  callfunc lua "Table" capt (map show aligns) widths headers rows'
+
+blockToCustom lua (BulletList items) = callfunc lua "BulletList" items
 
 {-
-
-
-blockToCustom opts (Table capt aligns widths headers rows') = do
-  let alignStrings = map alignmentToString aligns
-  captionDoc <- if null capt
-                   then return ""
-                   else do
-                      c <- inlineListToCustom opts capt
-                      return $ "<caption>" ++ c ++ "</caption>\n"
-  let percent w = show (truncate (100*w) :: Integer) ++ "%"
-  let coltags = if all (== 0.0) widths
-                   then ""
-                   else unlines $ map
-                         (\w -> "<col width=\"" ++ percent w ++ "\" />") widths
-  head' <- if all null headers
-              then return ""
-              else do
-                 hs <- tableRowToCustom opts alignStrings 0 headers
-                 return $ "<thead>\n" ++ hs ++ "\n</thead>\n"
-  body' <- zipWithM (tableRowToCustom opts alignStrings) [1..] rows'
-  return $ "<table>\n" ++ captionDoc ++ coltags ++ head' ++
-            "<tbody>\n" ++ unlines body' ++ "</tbody>\n</table>\n"
 
 blockToCustom opts x@(BulletList items) = do
   oldUseTags <- get >>= return . stUseTags

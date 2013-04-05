@@ -10,8 +10,12 @@ function Emph(s)
   return "<em>" .. s .. "</em>"
 end
 
-function Para(s)
+function Plain(s)
   return s
+end
+
+function Para(s)
+  return "<p>" .. s .. "</p>"
 end
 
 function Blocksep()
@@ -24,6 +28,14 @@ end
 
 function BlockQuote(s)
   return "<blockquote>\n" .. s .. "\n</blockquote>"
+end
+
+function BulletList(items)
+  local buffer = {}
+  for _, item in pairs(items) do
+    table.insert(buffer, "<li>" .. item .. "</li>")
+  end
+  return "<ul>\n" .. table.concat(buffer, "\n") .. "\n</ul>"
 end
 
 local meta = {}
