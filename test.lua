@@ -1,5 +1,20 @@
+local escape_table = {
+   ["<" ] = "&lt;",
+   [">" ] = "&gt;",
+   ["&" ] = "&amp;",
+   ["\"" ] = "&quot;",
+   ["'" ] = "&#39;"
+ }
+
+local function escape(s)
+  return s:gsub("[<>&\"']",
+    function(x)
+      return escape_table[x]
+    end)
+end
+
 function Str(s)
-  return s
+  return escape(s)
 end
 
 function Space()
@@ -26,12 +41,16 @@ function Superscript(s)
   return "<sup>" .. s .. "</sup>"
 end
 
-function Link(s)
-  return 
+function Link(s, src, tit)
+  return "<a href='" .. escape(src) .. "' title='" .. escape(tit) .. "'>" .. s .. "</a>"
+end
+
+function Image(s, src, tit)
+  return "<img src='" .. escape(src) .. "' title='" .. escape(tit) .. "'/>"
 end
 
 function Code(s)
-  return "<code>" .. s .. "</code>"
+  return "<code>" .. escape(s) .. "</code>"
 end
 
 function Plain(s)
@@ -49,7 +68,7 @@ end
 function Header(lev, s, attr)
   local ident = ""
   if attr['id'] then
-    ident = "id='" .. attr['id'] .. "'"
+    ident = "id='" .. escape(attr['id']) .. "'"
   end
   return "<h" .. lev .. ident .. ">" .. s .. "</h" .. lev .. ">"
 end
@@ -63,7 +82,7 @@ function HorizontalRule()
 end
 
 function CodeBlock(s)
-  return "<pre><code>\n" .. s .. "\n</code></pre>"
+  return "<pre><code>" .. escape(s) .. "</code></pre>"
 end
 
 function BulletList(items)
