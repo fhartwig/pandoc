@@ -68,7 +68,7 @@ end
 function Header(lev, s, attr)
   local ident = ""
   if attr['id'] then
-    ident = "id='" .. escape(attr['id']) .. "'"
+    ident = " id='" .. escape(attr['id']) .. "'"
   end
   return "<h" .. lev .. ident .. ">" .. s .. "</h" .. lev .. ">"
 end
