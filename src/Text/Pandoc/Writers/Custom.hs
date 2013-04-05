@@ -1,6 +1,6 @@
 {-# LANGUAGE OverlappingInstances, FlexibleInstances, OverloadedStrings #-}
-{-
-Copyright (C) 2012 John MacFarlane <jgm@berkeley.edu>
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+{- Copyright (C) 2012 John MacFarlane <jgm@berkeley.edu>
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -32,7 +32,6 @@ a lua writer.
 module Text.Pandoc.Writers.Custom ( writeCustom ) where
 import Text.Pandoc.Definition
 import Text.Pandoc.Options
-import Text.Pandoc.Shared
 import Data.List ( intersperse )
 import Scripting.Lua (LuaState, StackValue, callfunc)
 import qualified Scripting.Lua as Lua
@@ -64,13 +63,11 @@ instance StackValue ByteString where
     peek l n = (fmap . fmap) C8.pack (Lua.peek l n)
     valuetype _ = Lua.TSTRING
 
-addValue :: StackValue a => LuaState -> (Int, a) -> IO ()
-addValue lua (i, x) = Lua.push lua x >> Lua.rawseti lua (-2) i
-
 instance StackValue a => StackValue [a] where
   push lua xs = do
     Lua.createtable lua (length xs + 1) 0
-    mapM_ (addValue lua) $ zip [1..] xs
+    let addValue (i, x) = Lua.push lua x >> Lua.rawseti lua (-2) i
+    mapM_ addValue $ zip [1..] xs
   peek lua i = do
     top <- Lua.gettop lua
     let i' = if i < 0 then top + i + 1 else i
@@ -86,22 +83,22 @@ instance (StackValue a, StackValue b) => StackValue [(a,b)] where
     let addValue (k, v) = Lua.push lua k >> Lua.push lua v >>
                           Lua.rawset lua (-3)
     mapM_ addValue xs
-  peek lua i = undefined -- not needed for our purposes
+  peek _ _ = undefined -- not needed for our purposes
   valuetype _ = Lua.TTABLE
 
 instance StackValue [Inline] where
   push l ils = Lua.push l . C8.unpack =<< inlineListToCustom l ils
-  peek l n = undefined
+  peek _ _ = undefined
   valuetype _ = Lua.TSTRING
 
 instance StackValue [Block] where
   push l ils = Lua.push l . C8.unpack =<< blockListToCustom l ils
-  peek l n = undefined
+  peek _ _ = undefined
   valuetype _ = Lua.TSTRING
 
 -- | Convert Pandoc to custom markup.
 writeCustom :: FilePath -> WriterOptions -> Pandoc -> IO String
-writeCustom luaFile opts (Pandoc _ blocks) = do
+writeCustom luaFile _opts (Pandoc _ blocks) = do
   luaScript <- readFile luaFile
   lua <- Lua.newstate
   Lua.openlibs lua
@@ -168,47 +165,27 @@ inlineListToCustom lua lst = do
 -- | Convert Pandoc inline element to Custom.
 inlineToCustom :: LuaState -> Inline -> IO ByteString
 
-inlineToCustom lua (Str str) =
-  callfunc lua "Str" $ fromString str
+inlineToCustom lua (Str str) = callfunc lua "Str" $ fromString str
 
-inlineToCustom lua Space =
-  callfunc lua "Space"
+inlineToCustom lua Space = callfunc lua "Space"
 
-inlineToCustom lua (Emph lst) = do
-  x <- inlineListToCustom lua lst
-  callfunc lua "Emph" x
+inlineToCustom lua (Emph lst) = callfunc lua "Emph" lst
 
-inlineToCustom lua (Strong lst) = do
-  x <- inlineListToCustom lua lst
-  callfunc lua "Strong" x
+inlineToCustom lua (Strong lst) = callfunc lua "Strong" lst
 
-inlineToCustom lua (Strikeout lst) = do
-  x <- inlineListToCustom lua lst
-  callfunc lua "Strikeout" x
+inlineToCustom lua (Strikeout lst) = callfunc lua "Strikeout" lst
 
-inlineToCustom lua (Superscript lst) = do
-  x <- inlineListToCustom lua lst
-  callfunc lua "Superscript" x
+inlineToCustom lua (Superscript lst) = callfunc lua "Superscript" lst
 
-inlineToCustom lua (Subscript lst) = do
-  x <- inlineListToCustom lua lst
-  callfunc lua "Subscript" x
+inlineToCustom lua (Subscript lst) = callfunc lua "Subscript" lst
 
-inlineToCustom lua (SmallCaps lst) = do
-  x <- inlineListToCustom lua lst
-  callfunc lua "SmallCaps" x
+inlineToCustom lua (SmallCaps lst) = callfunc lua "SmallCaps" lst
 
-inlineToCustom lua (Quoted SingleQuote lst) = do
-  x <- inlineListToCustom lua lst
-  callfunc lua "SingleQuoted" x
+inlineToCustom lua (Quoted SingleQuote lst) = callfunc lua "SingleQuoted" lst
 
-inlineToCustom lua (Quoted DoubleQuote lst) = do
-  x <- inlineListToCustom lua lst
-  callfunc lua "DoubleQuoted" x
+inlineToCustom lua (Quoted DoubleQuote lst) = callfunc lua "DoubleQuoted" lst
 
-inlineToCustom lua (Cite _  lst) = do
-  x <- inlineListToCustom lua lst
-  callfunc lua "Cite" x
+inlineToCustom lua (Cite _  lst) = callfunc lua "Cite" lst
 
 inlineToCustom lua (Code attr str) =
   callfunc lua "Code" (fromString str) (attrToAssocList attr)
@@ -222,18 +199,13 @@ inlineToCustom lua (Math InlineMath str) =
 inlineToCustom lua (RawInline format str) =
   callfunc lua "RawInline" format (fromString str)
 
-inlineToCustom lua (LineBreak) =
-  callfunc lua "LineBreak"
+inlineToCustom lua (LineBreak) = callfunc lua "LineBreak"
 
-inlineToCustom lua (Link txt (src,tit)) = do
-  label <- inlineListToCustom lua txt
-  callfunc lua "Link" label (fromString src) (fromString tit)
+inlineToCustom lua (Link txt (src,tit)) =
+  callfunc lua "Link" txt (fromString src) (fromString tit)
 
-inlineToCustom lua (Image alt (src,tit)) = do
-  alt' <- inlineListToCustom lua alt
-  callfunc lua "Image" alt' (fromString src) (fromString tit)
+inlineToCustom lua (Image alt (src,tit)) =
+  callfunc lua "Image" alt (fromString src) (fromString tit)
 
-inlineToCustom lua (Note contents) = do
-  contents' <- blockListToCustom lua contents
-  callfunc lua "Note" contents'
+inlineToCustom lua (Note contents) = callfunc lua "Note" contents
 

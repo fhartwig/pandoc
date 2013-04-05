@@ -6,12 +6,28 @@ function Space()
   return " "
 end
 
+function LineBreak()
+  return "<br/>"
+end
+
 function Emph(s)
   return "<em>" .. s .. "</em>"
 end
 
 function Strong(s)
   return "<strong>" .. s .. "</strong>"
+end
+
+function Subscript(s)
+  return "<sub>" .. s .. "</sub>"
+end
+
+function Superscript(s)
+  return "<sup>" .. s .. "</sup>"
+end
+
+function Link(s)
+  return 
 end
 
 function Code(s)
